@@ -1,0 +1,4 @@
+# Dependencias adicionales para ejecutar el notebook de demostración.
+# Instalar junto con backend/requirements.txt.
+jupyter==1.0.0
+matplotlib==3.9.0

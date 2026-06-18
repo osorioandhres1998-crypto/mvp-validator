@@ -1,0 +1,19 @@
+{
+  "n_iterations": 10000,
+  "population_size": 1000,
+  "adoption_prob_base": 0.2,
+  "feature_weights": {
+    "usabilidad": 1.0,
+    "diseno": 0.7,
+    "innovacion": 0.9,
+    "soporte": 0.5,
+    "confiabilidad": 0.8
+  },
+  "price_sensitivity": 1.0,
+  "noise_distribution": {
+    "type": "normal",
+    "params": { "loc": 0.0, "scale": 1.0 }
+  },
+  "random_seed": 42,
+  "include_raw_samples": true
+}
