@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.llm.config_builder import build_simulation_plan
 from app.models.schemas import (
     CreateSimulationResponse,
     HealthResponse,
+    IdeaAnalysisRequest,
     SamplesPage,
     SimulationConfig,
     SimulationStatus,
@@ -32,6 +34,36 @@ def health() -> HealthResponse:
 def create_simulation(config: SimulationConfig) -> CreateSimulationResponse:
     """Encola una nueva simulación y devuelve su identificador."""
     record = store.create(config.to_engine_config())
+    return CreateSimulationResponse(simulation_id=record.id, status=record.status)
+
+
+@router.post(
+    "/ideas/analyze",
+    response_model=CreateSimulationResponse,
+    status_code=202,
+    tags=["ideas"],
+)
+def analyze_idea(request: IdeaAnalysisRequest) -> CreateSimulationResponse:
+    """Analiza una idea: genera audiencias con IA y lanza la simulación.
+
+    Construye los arquetipos de audiencia (Claude si hay clave; si no,
+    heurística), agrega su configuración y encola la simulación. Al finalizar,
+    los resultados incluirán ``archetypes`` e ``insights`` accionables.
+    """
+    overrides = request.simulation.model_dump() if request.simulation else None
+    plan = build_simulation_plan(
+        idea=request.idea,
+        target_audience=request.target_audience,
+        n_archetypes=request.n_archetypes,
+        simulation_overrides=overrides,
+    )
+    meta = {
+        "idea": request.idea,
+        "target_audience": request.target_audience,
+        "archetypes": plan["archetypes"],
+        "source": plan["source"],
+    }
+    record = store.create(plan["config"], meta=meta)
     return CreateSimulationResponse(simulation_id=record.id, status=record.status)
 
 
@@ -68,7 +100,15 @@ def get_results(simulation_id: str) -> dict:
             status_code=409,
             detail=f"La simulación aún no está lista (estado: {record.status.value}).",
         )
-    return {"simulation_id": record.id, **record.result}
+    payload = {"simulation_id": record.id, **record.result}
+    # Enriquecer con metadatos del análisis de idea, si los hay.
+    if record.meta.get("idea"):
+        payload["idea"] = record.meta.get("idea")
+        payload["target_audience"] = record.meta.get("target_audience")
+        payload["archetypes"] = record.meta.get("archetypes", [])
+        payload["audience_source"] = record.meta.get("source")
+        payload["insights"] = record.insights
+    return payload
 
 
 @router.get(

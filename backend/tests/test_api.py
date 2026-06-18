@@ -85,6 +85,35 @@ def test_invalid_config_rejected():
     assert resp.status_code == 422
 
 
+def test_analyze_idea_flow(monkeypatch):
+    # Sin clave de API => se usa la heurística determinista (sin red).
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    payload = {
+        "idea": "Plataforma que valida ideas de producto con audiencias simuladas por IA.",
+        "target_audience": "Startups B2B y equipos de producto en LATAM.",
+        "n_archetypes": 6,
+        "simulation": {"n_iterations": 200, "population_size": 200, "n_jobs": 1},
+    }
+    resp = client.post("/ideas/analyze", json=payload)
+    assert resp.status_code == 202
+    sim_id = resp.json()["simulation_id"]
+
+    assert _wait_until_done(sim_id) == "done"
+
+    results = client.get(f"/simulations/{sim_id}/results").json()
+    assert results["audience_source"] == "heuristic"
+    assert len(results["archetypes"]) == 6
+    assert "acceptance_rate" in results
+    assert results["insights"] is not None
+    assert "summary" in results["insights"]
+
+
+def test_analyze_idea_validation():
+    # idea demasiado corta => 422
+    resp = client.post("/ideas/analyze", json={"idea": "corta", "target_audience": "abc"})
+    assert resp.status_code == 422
+
+
 def test_samples_second_page():
     resp = client.post("/simulations", json=SMALL_CONFIG)
     sim_id = resp.json()["simulation_id"]

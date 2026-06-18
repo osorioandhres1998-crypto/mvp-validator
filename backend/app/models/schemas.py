@@ -62,6 +62,29 @@ class SimulationConfig(BaseModel):
         return self.model_dump()
 
 
+class SimulationOverrides(BaseModel):
+    """Parámetros de simulación opcionales para el análisis de una idea."""
+
+    n_iterations: int | None = Field(None, ge=1, le=1_000_000)
+    population_size: int | None = Field(None, ge=1, le=1_000_000)
+    random_seed: int | None = None
+    include_raw_samples: bool | None = None
+    n_jobs: int | None = None
+
+
+class IdeaAnalysisRequest(BaseModel):
+    """Petición para analizar una idea de producto generando audiencias con IA."""
+
+    idea: str = Field(
+        ..., min_length=10, description="Descripción de la idea de producto."
+    )
+    target_audience: str = Field(
+        ..., min_length=3, description="Público objetivo (demografía, contexto, etc.)."
+    )
+    n_archetypes: int = Field(8, ge=1, le=12)
+    simulation: SimulationOverrides | None = None
+
+
 class MetricSummary(BaseModel):
     """Resumen de una métrica con intervalo de confianza al 95 %."""
 
