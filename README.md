@@ -15,7 +15,7 @@
 
 El usuario carga una idea de producto y el sistema crea **miles de perfiles virtuales (audiencias simuladas)**. Estos perfiles "reaccionan" a la propuesta como lo haría un cliente real, generando insights accionables antes de cualquier inversión.
 
-Esta primera iteración implementa el **motor de simulación Monte Carlo** que modela estadísticamente esas reacciones, expuesto mediante una **API REST (FastAPI)**. La generación de perfiles y respuestas textuales con un **LLM (Claude)** queda preparada como punto de extensión (ver [Roadmap de IA](#-roadmap-de-ia)).
+El sistema combina un **motor de simulación Monte Carlo** (núcleo estadístico, sin dependencias pesadas de ML) con la **API de Claude (Anthropic)**, que genera los arquetipos de audiencia y redacta los insights. Todo se expone mediante una **API REST (FastAPI)** y un **dashboard en Next.js**. La integración con Claude es **opcional en runtime**: si no hay `ANTHROPIC_API_KEY`, el flujo degrada a una heurística determinista y sigue funcionando.
 
 ---
 
@@ -67,12 +67,12 @@ El **motor Monte Carlo** ejecuta miles de iteraciones; en cada una genera una po
 │   │   ├── sim/monte_carlo.py # Motor de simulación (run_simulation)
 │   │   ├── models/schemas.py  # Schemas pydantic
 │   │   ├── utils/             # seed, logging, paralelización
-│   │   ├── llm/profiles.py    # Hook para integración con Claude
+│   │   ├── llm/               # Integración con Claude (client, profiles, config_builder)
 │   │   └── store.py           # Cola y almacén de simulaciones
 │   ├── tests/                 # Unit + integración
 │   ├── requirements.txt       # Dependencias fijas
 │   └── Dockerfile
-└── frontend/                  # Placeholder Next.js + TypeScript
+└── frontend/                  # Dashboard Next.js + TypeScript
 ```
 
 ---
@@ -114,11 +114,29 @@ npm run dev                        # http://localhost:3000
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `POST` | `/simulations` | Encola una simulación. Devuelve `simulation_id`. |
+| `POST` | `/ideas/analyze` | **Analiza una idea con IA**: genera arquetipos de audiencia y lanza la simulación. |
+| `POST` | `/simulations` | Encola una simulación con `config` manual. Devuelve `simulation_id`. |
 | `GET`  | `/simulations/{id}/status` | Estado: `queued` / `running` / `done` / `failed`. |
-| `GET`  | `/simulations/{id}/results` | Resultados agregados. |
+| `GET`  | `/simulations/{id}/results` | Resultados agregados (incluye `archetypes` e `insights` si vino de `/ideas/analyze`). |
 | `GET`  | `/simulations/{id}/samples?limit=100&page=1` | Muestras crudas paginadas. |
 | `GET`  | `/health` | Estado del servicio. |
+
+### Analizar una idea con IA
+
+```bash
+curl -X POST http://localhost:8000/ideas/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idea": "App de finanzas para freelancers que automatiza impuestos",
+    "target_audience": "Freelancers de 25-45 en LATAM con ingresos variables",
+    "n_archetypes": 8,
+    "simulation": { "n_iterations": 5000, "population_size": 1000 }
+  }'
+# => { "simulation_id": "ab12...", "status": "queued" }
+```
+
+Al finalizar, `GET /simulations/{id}/results` añade `archetypes`, `audience_source`
+(`claude` o `heuristic`) e `insights` (resumen + recomendaciones por objeción).
 
 ### Ejemplo de uso
 
@@ -217,24 +235,34 @@ Ejecuta un escenario realista y genera gráficos de la distribución de aceptaci
 
 ---
 
-## 🤖 Roadmap de IA
+## 🤖 Integración con Claude
 
-El motor actual es **puramente estadístico** (sin dependencias pesadas de ML). El módulo [`backend/app/llm/profiles.py`](backend/app/llm/profiles.py) define la interfaz (`ProfileGenerator`) que la siguiente iteración implementará con la **API de Claude** para:
+El **núcleo de simulación** es puramente estadístico (numpy), pero la generación de audiencias y los insights usan la **API de Claude**:
 
-1. Generar perfiles virtuales realistas a partir de la descripción de la idea y el público objetivo.
-2. Convertir las objeciones agregadas en **explicaciones en lenguaje natural**.
+- [`backend/app/llm/profiles.py`](backend/app/llm/profiles.py) — `ClaudeProfileGenerator` genera los arquetipos y redacta los insights; `HeuristicProfileGenerator` es el fallback offline determinista. Una fábrica elige según `ANTHROPIC_API_KEY`.
+- [`backend/app/llm/config_builder.py`](backend/app/llm/config_builder.py) — traduce la idea + público objetivo en arquetipos y los **agrega** (media ponderada por cuota) en una configuración de simulación.
+- [`backend/app/llm/client.py`](backend/app/llm/client.py) — wrapper del SDK `anthropic` con extracción robusta de JSON.
 
-Sustituir `StubProfileGenerator` por una implementación basada en el SDK `anthropic` (modelo `claude-opus-4-8` o el vigente) sin tocar el motor de simulación ni la API.
+### Activar Claude
+
+```bash
+# backend/.env
+ANTHROPIC_API_KEY=sk-ant-...
+LLM_MODEL=claude-sonnet-4-6   # opcional
+```
+
+Sin la clave, `POST /ideas/analyze` sigue funcionando con la heurística (útil para desarrollo, pruebas y CI). El campo `audience_source` indica qué motor se usó.
 
 ---
 
 ## 🗺️ Próximos pasos para el siguiente desarrollador
 
+- [x] Generador de perfiles con Claude (`app/llm/profiles.py`).
+- [x] Dashboard del frontend: formulario de idea + resultados.
 - [ ] Persistencia en **PostgreSQL** (el servicio ya está preparado y comentado en `docker-compose.yml`).
 - [ ] Cola de trabajo real (Celery/RQ) en lugar del `ThreadPoolExecutor` en memoria.
-- [ ] Implementar el generador de perfiles con Claude (`app/llm/profiles.py`).
-- [ ] UI real del frontend: formulario de idea + dashboard de resultados.
-- [ ] Segmentación de audiencias (perfiles por demografía/psicografía).
+- [ ] Simulación **por segmento** (acceptance por arquetipo, no solo agregada).
+- [ ] Caché de llamadas a Claude y control de coste/tokens.
 
 ---
 
