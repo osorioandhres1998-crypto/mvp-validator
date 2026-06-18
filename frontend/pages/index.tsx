@@ -1,34 +1,54 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import IdeaForm from "../components/IdeaForm";
+import ResultsDashboard from "../components/ResultsDashboard";
+import { analyzeIdea, waitForResults } from "../lib/api";
+import type { AnalyzeIdeaInput, SimulationResults } from "../lib/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-/**
- * Página placeholder del frontend de MVP Validator.
- *
- * Comprueba la conectividad con el backend FastAPI consultando /health.
- * Sustituir por la UI real (formulario de idea, dashboard de resultados) en
- * iteraciones posteriores.
- */
 export default function Home() {
-  const [health, setHealth] = useState<string>("comprobando...");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<SimulationResults | null>(null);
 
-  useEffect(() => {
-    fetch(`${API_URL}/health`)
-      .then((r) => r.json())
-      .then((d) => setHealth(d.status ?? "desconocido"))
-      .catch(() => setHealth("backend no disponible"));
-  }, []);
+  async function handleSubmit(input: AnalyzeIdeaInput) {
+    setLoading(true);
+    setError(null);
+    setResults(null);
+    try {
+      const { simulation_id } = await analyzeIdea(input);
+      const data = await waitForResults(simulation_id);
+      setResults(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error desconocido");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <main style={{ fontFamily: "system-ui", padding: "3rem", maxWidth: 720 }}>
-      <h1>🧪 MVP Validator</h1>
-      <p>Placeholder del frontend (Next.js + TypeScript).</p>
-      <p>
-        Estado del backend (<code>{API_URL}/health</code>): <strong>{health}</strong>
-      </p>
-      <p>
-        Documentación de la API: <a href={`${API_URL}/docs`}>{API_URL}/docs</a>
-      </p>
+    <main className="container">
+      <header className="hero">
+        <h1>🧪 MVP Validator</h1>
+        <p>
+          Valida tu idea con <strong>audiencias simuladas</strong>. La IA genera
+          arquetipos de tu público objetivo y una simulación Monte Carlo estima
+          aceptación, intención de compra, objeciones y características clave.
+        </p>
+      </header>
+
+      <IdeaForm onSubmit={handleSubmit} loading={loading} />
+
+      {loading && (
+        <div className="status-banner">
+          ⏳ Generando audiencias y ejecutando la simulación…
+        </div>
+      )}
+      {error && <div className="status-banner error">⚠️ {error}</div>}
+
+      {results && <ResultsDashboard data={results} />}
+
+      <footer className="footer">
+        Backend: <code>{process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}</code>
+      </footer>
     </main>
   );
 }
