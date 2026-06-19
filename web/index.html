@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MVP Validator — Simulador de audiencias (demo en el navegador)</title>
+<style>
+  :root {
+    --bg: #0f1226; --bg-2: #171a35; --panel: #1d2142; --border: #2c3160;
+    --text: #eef0ff; --muted: #9aa0c7; --accent: #6c5ce7; --accent-2: #00b894;
+    --warn: #e17055; --ok: #00b894;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--text); min-height: 100vh;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, #232a5c 0%, var(--bg) 55%);
+  }
+  .container { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  .hero h1 { font-size: 2.4rem; margin: 0 0 0.4rem; }
+  .hero p { color: var(--muted); max-width: 720px; line-height: 1.5; }
+  .badge {
+    display: inline-block; background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.75rem; color: var(--muted);
+    margin-bottom: 0.8rem;
+  }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    padding: 1.25rem 1.4rem; margin-top: 1.25rem;
+  }
+  h3 { margin: 0 0 1rem; font-size: 1.05rem; }
+  label { display: block; margin-bottom: 1rem; font-weight: 600; font-size: 0.9rem; }
+  textarea {
+    width: 100%; margin-top: 0.4rem; background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); padding: 0.7rem; font: inherit; resize: vertical;
+  }
+  .form-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+  .form-row label { font-weight: 500; color: var(--muted); }
+  input[type="range"] { width: 100%; margin-top: 0.5rem; accent-color: var(--accent); }
+  button {
+    background: linear-gradient(135deg, var(--accent), #8e7bff); color: white; border: none;
+    border-radius: 10px; padding: 0.8rem 1.4rem; font-size: 1rem; font-weight: 700; cursor: pointer;
+    margin-top: 0.5rem;
+  }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .status-banner {
+    margin-top: 1.25rem; padding: 0.9rem 1.1rem; border-radius: 12px;
+    background: var(--bg-2); border: 1px solid var(--border);
+  }
+  .gauges { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; }
+  .gauge { text-align: center; }
+  .gauge-label { margin-top: 0.4rem; color: var(--muted); font-weight: 600; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  .bar-row { margin-bottom: 0.9rem; }
+  .bar-head { display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.3rem; }
+  .bar-track { height: 10px; background: var(--bg-2); border-radius: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
+  .bar-caption { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+  .summary { line-height: 1.55; }
+  .reco-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+  .reco-list li { padding: 0.7rem 0; border-top: 1px solid var(--border); line-height: 1.45; }
+  .muted { color: var(--muted); }
+  .source-tag { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+  .archetypes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+  .archetype-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem; }
+  .archetype-head { display: flex; justify-content: space-between; align-items: center; }
+  .chip { background: var(--accent); color: white; border-radius: 999px; padding: 0.1rem 0.55rem; font-size: 0.75rem; font-weight: 700; }
+  .archetype-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
+  .archetype-meta { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .drivers { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .driver { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 0.1rem 0.45rem; font-size: 0.72rem; }
+  .meta { display: flex; gap: 1.5rem; flex-wrap: wrap; color: var(--muted); font-size: 0.82rem; }
+  .footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; text-align: center; }
+  code { background: var(--bg-2); padding: 0.1rem 0.35rem; border-radius: 5px; }
+  .hidden { display: none; }
+  @media (max-width: 720px) { .form-row, .grid-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="container">
+  <header class="hero">
+    <span class="badge">⚡ 100% en el navegador · sin backend</span>
+    <h1>🧪 MVP Validator</h1>
+    <p>
+      Valida una idea con <strong>audiencias simuladas</strong>. Esta página es un
+      port en JavaScript del motor <strong>Monte Carlo</strong> del proyecto: genera
+      arquetipos de tu público objetivo y estima aceptación, intención de compra,
+      objeciones y características clave — todo se ejecuta localmente en tu equipo.
+    </p>
+  </header>
+
+  <form class="panel" id="form">
+    <label>Idea de producto
+      <textarea id="idea" rows="3">App de finanzas personales para freelancers que automatiza la categorización de gastos y la previsión de impuestos.</textarea>
+    </label>
+    <label>Público objetivo
+      <textarea id="audience" rows="2">Freelancers y autónomos de 25-45 años en LATAM con ingresos variables.</textarea>
+    </label>
+    <div class="form-row">
+      <label>Arquetipos: <strong id="lblArch">8</strong>
+        <input type="range" id="nArch" min="1" max="8" value="8" />
+      </label>
+      <label>Iteraciones: <strong id="lblIter">3000</strong>
+        <input type="range" id="nIter" min="500" max="6000" step="500" value="3000" />
+      </label>
+      <label>Población: <strong id="lblPop">1000</strong>
+        <input type="range" id="nPop" min="200" max="2000" step="100" value="1000" />
+      </label>
+      <label>Semilla: <strong id="lblSeed">42</strong>
+        <input type="range" id="seed" min="1" max="100" value="42" />
+      </label>
+    </div>
+    <button type="submit" id="runBtn">🚀 Validar idea</button>
+  </form>
+
+  <div id="status" class="status-banner hidden"></div>
+  <div id="dashboard"></div>
+
+  <footer class="footer">
+    Port en el navegador del motor <code>app/sim/monte_carlo.py</code> ·
+    MVP Validator
+  </footer>
+</main>
+
+<script>
+// ===========================================================================
+//  Motor Monte Carlo (port de backend/app/sim/monte_carlo.py a JavaScript)
+// ===========================================================================
+
+const DEFAULT_FEATURES = ["usabilidad", "diseno", "innovacion", "soporte", "confiabilidad"];
+const OBJECTION_LABELS = ["precio_alto", "valor_percibido_bajo", "no_lo_necesita"];
+const OBJECTION_ES = {
+  precio_alto: "Precio alto",
+  valor_percibido_bajo: "Valor percibido bajo",
+  no_lo_necesita: "No lo necesita",
+};
+const OBJECTION_RECO = {
+  precio_alto: "El precio percibido frena la adopción. Considera un plan de entrada más económico, prueba gratuita o comunicar mejor el retorno de inversión.",
+  valor_percibido_bajo: "La propuesta de valor no termina de convencer. Refuerza el beneficio diferencial y aporta pruebas (casos de éxito, métricas).",
+  no_lo_necesita: "Parte de la audiencia no percibe la necesidad. Trabaja la educación de mercado y segmenta hacia quienes ya sienten el problema.",
+};
+
+// --- RNG reproducible (mulberry32) ---
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function makeRng(seed) { return mulberry32((seed >>> 0) || 1); }
+function randn(rng) {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function sigmoid(x) { return 0.5 * (1 + Math.tanh(0.5 * x)); }
+function logit(p) { p = Math.min(Math.max(p, 1e-6), 1 - 1e-6); return Math.log(p / (1 - p)); }
+
+function percentile(sortedArr, p) {
+  const idx = (sortedArr.length - 1) * p;
+  const lo = Math.floor(idx), hi = Math.ceil(idx);
+  if (lo === hi) return sortedArr[lo];
+  return sortedArr[lo] + (sortedArr[hi] - sortedArr[lo]) * (idx - lo);
+}
+function summary(values) {
+  const arr = values.slice().sort((a, b) => a - b);
+  const n = arr.length;
+  const mean = values.reduce((s, x) => s + x, 0) / n;
+  const variance = n > 1 ? values.reduce((s, x) => s + (x - mean) ** 2, 0) / (n - 1) : 0;
+  const std = Math.sqrt(variance);
+  return {
+    mean, std, sem: n > 1 ? std / Math.sqrt(n) : 0,
+    ci_95_lower: percentile(arr, 0.025),
+    ci_95_upper: percentile(arr, 0.975),
+  };
+}
+
+// --- Arquetipos heurísticos (port de app/llm/profiles.py) ---
+const ARCHETYPE_TEMPLATES = [
+  { name: "Adoptador temprano", description: "Entusiasta de la innovación, dispuesto a probar lo nuevo.", price_sensitivity: 0.6, adoption_prob_base: 0.45, drivers: ["innovacion", "diseno"] },
+  { name: "Pragmático sensible al precio", description: "Busca valor claro y compara coste-beneficio antes de adoptar.", price_sensitivity: 1.8, adoption_prob_base: 0.2, drivers: ["confiabilidad", "usabilidad"] },
+  { name: "Profesional ocupado", description: "Prioriza la facilidad de uso y el ahorro de tiempo.", price_sensitivity: 1.0, adoption_prob_base: 0.3, drivers: ["usabilidad", "soporte"] },
+  { name: "Escéptico cauto", description: "Desconfía de promesas; necesita pruebas y soporte sólido.", price_sensitivity: 1.3, adoption_prob_base: 0.12, drivers: ["confiabilidad", "soporte"] },
+  { name: "Optimizador de costes", description: "Solo adopta si el retorno económico es evidente.", price_sensitivity: 2.2, adoption_prob_base: 0.15, drivers: ["confiabilidad"] },
+  { name: "Creativo orientado al diseño", description: "Valora la estética y la experiencia por encima del precio.", price_sensitivity: 0.7, adoption_prob_base: 0.35, drivers: ["diseno", "innovacion"] },
+  { name: "Mayoría tardía", description: "Adopta cuando la solución ya está validada por otros.", price_sensitivity: 1.1, adoption_prob_base: 0.18, drivers: ["confiabilidad", "usabilidad"] },
+  { name: "Comprador empresarial", description: "Decide por soporte, fiabilidad e integración, no por precio.", price_sensitivity: 0.9, adoption_prob_base: 0.28, drivers: ["soporte", "confiabilidad"] },
+];
+
+function generateArchetypes(n) {
+  n = Math.max(1, Math.min(n, ARCHETYPE_TEMPLATES.length));
+  return ARCHETYPE_TEMPLATES.slice(0, n).map((tpl) => {
+    const weights = {};
+    DEFAULT_FEATURES.forEach((f) => (weights[f] = 0.5));
+    tpl.drivers.forEach((d) => (weights[d] = 1.2));
+    return {
+      name: tpl.name, description: tpl.description,
+      segment_share: +(1 / n).toFixed(4),
+      price_sensitivity: tpl.price_sensitivity,
+      adoption_prob_base: tpl.adoption_prob_base,
+      feature_weights: weights, key_drivers: tpl.drivers,
+    };
+  });
+}
+
+function aggregateArchetypes(archetypes) {
+  const shares = archetypes.map((a) => Math.max(0, a.segment_share));
+  const total = shares.reduce((s, x) => s + x, 0);
+  const norm = total > 0 ? shares.map((s) => s / total) : shares.map(() => 1 / shares.length);
+  const fw = {};
+  DEFAULT_FEATURES.forEach((f) => (fw[f] = 0));
+  let price = 0, base = 0;
+  archetypes.forEach((a, i) => {
+    DEFAULT_FEATURES.forEach((f) => (fw[f] += norm[i] * (a.feature_weights[f] || 0)));
+    price += norm[i] * a.price_sensitivity;
+    base += norm[i] * a.adoption_prob_base;
+  });
+  return { feature_weights: fw, price_sensitivity: price, adoption_prob_base: Math.min(Math.max(base, 0.01), 0.99) };
+}
+
+// --- Simulación principal ---
+function runSimulation(cfg) {
+  const t0 = performance.now();
+  const features = Object.keys(cfg.feature_weights);
+  const weights = features.map((f) => cfg.feature_weights[f]);
+  const nf = features.length;
+  const baseLogit = logit(cfg.adoption_prob_base);
+  const noiseScale = cfg.noise_scale ?? 1.0;
+
+  const acceptance = new Array(cfg.n_iterations);
+  const purchase = new Array(cfg.n_iterations);
+  const objTotals = [0, 0, 0];
+  const corrSum = new Array(nf).fill(0);
+  let corrCount = new Array(nf).fill(0);
+
+  for (let it = 0; it < cfg.n_iterations; it++) {
+    const rng = makeRng((cfg.random_seed * 2654435761 + it * 40503) >>> 0);
+    let adopted = 0, purchased = 0;
+    const objIter = [0, 0, 0];
+    // acumuladores para correlación punto-biserial por característica
+    const sx = new Array(nf).fill(0), sx2 = new Array(nf).fill(0), sxy = new Array(nf).fill(0);
+    let sy = 0;
+    const pop = cfg.population_size;
+
+    for (let i = 0; i < pop; i++) {
+      let featUtil = 0;
+      const perc = new Array(nf);
+      for (let j = 0; j < nf; j++) {
+        const p = rng();
+        perc[j] = p;
+        featUtil += (p - 0.5) * weights[j];
+      }
+      const pricePerc = rng();
+      const priceEffect = cfg.price_sensitivity * pricePerc;
+      const noise = noiseScale * randn(rng);
+      const lg = baseLogit + featUtil - priceEffect + noise;
+      const aProb = sigmoid(lg);
+      const isAdopt = rng() < aProb ? 1 : 0;
+      adopted += isAdopt;
+      const purProb = aProb * (1 - 0.5 * pricePerc);
+      if (rng() < purProb) purchased++;
+
+      if (!isAdopt) {
+        const sPrecio = priceEffect, sValor = -featUtil, sNo = -(baseLogit + noise);
+        let best = 0, bestV = sPrecio;
+        if (sValor > bestV) { best = 1; bestV = sValor; }
+        if (sNo > bestV) { best = 2; }
+        objIter[best]++;
+      }
+      sy += isAdopt;
+      for (let j = 0; j < nf; j++) { sx[j] += perc[j]; sx2[j] += perc[j] * perc[j]; sxy[j] += perc[j] * isAdopt; }
+    }
+
+    acceptance[it] = adopted / pop;
+    purchase[it] = purchased / pop;
+    for (let k = 0; k < 3; k++) objTotals[k] += objIter[k];
+
+    // correlación por característica de esta iteración
+    const yMean = sy / pop;
+    const yVar = yMean * (1 - yMean); // var de Bernoulli
+    if (yVar > 0) {
+      for (let j = 0; j < nf; j++) {
+        const xMean = sx[j] / pop;
+        const xVar = sx2[j] / pop - xMean * xMean;
+        const cov = sxy[j] / pop - xMean * yMean;
+        if (xVar > 0) {
+          corrSum[j] += cov / Math.sqrt(xVar * yVar);
+          corrCount[j]++;
+        }
+      }
+    }
+  }
+
+  const objSum = objTotals.reduce((s, x) => s + x, 0);
+  const topObjections = OBJECTION_LABELS.map((label, i) => ({
+    objection: label, count: objTotals[i],
+    frequency: objSum ? objTotals[i] / objSum : 0,
+  })).sort((a, b) => b.count - a.count);
+
+  const meanCorr = corrSum.map((s, j) => (corrCount[j] ? s / corrCount[j] : 0));
+  const absSum = meanCorr.reduce((s, x) => s + Math.abs(x), 0);
+  const featureImportance = features.map((f, j) => ({
+    feature: f, sensitivity: meanCorr[j],
+    importance: absSum ? Math.abs(meanCorr[j]) / absSum : 0,
+  })).sort((a, b) => b.importance - a.importance);
+
+  return {
+    acceptance_rate: summary(acceptance),
+    purchase_intent_probability: summary(purchase),
+    top_objections: topObjections,
+    feature_importance: featureImportance,
+    execution_metrics: {
+      n_iterations: cfg.n_iterations, population_size: cfg.population_size,
+      random_seed: cfg.random_seed, elapsed_seconds: (performance.now() - t0) / 1000,
+    },
+  };
+}
+
+function buildInsights(results) {
+  const acc = results.acceptance_rate.mean;
+  const top = results.top_objections[0];
+  const summaryTxt = `La aceptación media estimada es del ${(acc * 100).toFixed(0)}%. ` +
+    (top ? `La objeción dominante es "${OBJECTION_ES[top.objection]}".` : "No se detectaron objeciones relevantes.");
+  const recommendations = results.top_objections.map((o) => ({
+    objection: o.objection, frequency: o.frequency,
+    recommendation: OBJECTION_RECO[o.objection] || "Analiza esta objeción con investigación cualitativa.",
+  }));
+  return { summary: summaryTxt, recommendations, source: "heuristic (navegador)" };
+}
+
+// ===========================================================================
+//  Render
+// ===========================================================================
+
+function gaugeSVG(label, metric, color) {
+  const pct = Math.max(0, Math.min(1, metric.mean));
+  const size = 160, stroke = 14, r = (size - stroke) / 2, circ = 2 * Math.PI * r, dash = circ * pct;
+  return `<div class="gauge">
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${stroke}"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+        stroke-linecap="round" stroke-dasharray="${dash} ${circ - dash}"
+        transform="rotate(-90 ${size/2} ${size/2})"/>
+      <text x="50%" y="48%" text-anchor="middle" font-size="30" font-weight="700" fill="var(--text)">${(pct*100).toFixed(1)}%</text>
+      <text x="50%" y="64%" text-anchor="middle" font-size="11" fill="var(--muted)">CI95 ${(metric.ci_95_lower*100).toFixed(1)}–${(metric.ci_95_upper*100).toFixed(1)}%</text>
+    </svg>
+    <div class="gauge-label">${label}</div>
+  </div>`;
+}
+
+function barList(items, color) {
+  const max = Math.max(...items.map((i) => i.value), 1e-9);
+  return `<div class="barlist">${items.map((item) => `
+    <div class="bar-row">
+      <div class="bar-head"><span>${item.label}</span><span>${(item.value*100).toFixed(1)}%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(item.value/max)*100}%;background:${color}"></div></div>
+      ${item.caption ? `<div class="bar-caption">${item.caption}</div>` : ""}
+    </div>`).join("")}</div>`;
+}
+
+function archetypeCards(archetypes) {
+  return `<div class="archetypes">${archetypes.map((a) => `
+    <div class="archetype-card">
+      <div class="archetype-head"><strong>${a.name}</strong><span class="chip">${(a.segment_share*100).toFixed(0)}%</span></div>
+      <p class="archetype-desc">${a.description}</p>
+      <div class="archetype-meta">
+        <span>💰 Sensibilidad precio: ${a.price_sensitivity.toFixed(1)}</span>
+        <span>📈 Adopción base: ${(a.adoption_prob_base*100).toFixed(0)}%</span>
+      </div>
+      <div class="drivers">${a.key_drivers.map((d) => `<span class="driver">${d}</span>`).join("")}</div>
+    </div>`).join("")}</div>`;
+}
+
+function renderDashboard(results, archetypes, insights) {
+  const objections = results.top_objections.map((o) => ({ label: OBJECTION_ES[o.objection] || o.objection, value: o.frequency }));
+  const features = results.feature_importance.map((f) => ({ label: f.feature, value: f.importance, caption: `sensibilidad ${f.sensitivity.toFixed(3)}` }));
+  document.getElementById("dashboard").innerHTML = `
+    <section class="panel gauges">
+      ${gaugeSVG("Aceptación de mercado", results.acceptance_rate, "var(--accent)")}
+      ${gaugeSVG("Intención de compra", results.purchase_intent_probability, "var(--accent-2)")}
+    </section>
+    <section class="panel">
+      <h3>🧠 Resumen accionable</h3>
+      <p class="summary">${insights.summary}</p>
+      <ul class="reco-list">${insights.recommendations.map((r) => `
+        <li><strong>${OBJECTION_ES[r.objection] || r.objection}</strong> <span class="muted">(${(r.frequency*100).toFixed(0)}%)</span><div>${r.recommendation}</div></li>`).join("")}</ul>
+      <span class="source-tag">fuente: ${insights.source}</span>
+    </section>
+    <div class="grid-2">
+      <section class="panel"><h3>🚧 Principales objeciones</h3>${barList(objections, "var(--warn)")}</section>
+      <section class="panel"><h3>⭐ Características más valoradas</h3>${barList(features, "var(--ok)")}</section>
+    </div>
+    <section class="panel">
+      <h3>👥 Arquetipos de audiencia <span class="source-tag">fuente: heurística (navegador)</span></h3>
+      ${archetypeCards(archetypes)}
+    </section>
+    <section class="panel meta">
+      <span>${results.execution_metrics.n_iterations.toLocaleString()} iteraciones × ${results.execution_metrics.population_size.toLocaleString()} perfiles</span>
+      <span>${results.execution_metrics.elapsed_seconds.toFixed(2)} s</span>
+      <span>seed ${results.execution_metrics.random_seed}</span>
+    </section>`;
+}
+
+// ===========================================================================
+//  UI
+// ===========================================================================
+
+const $ = (id) => document.getElementById(id);
+[["nArch","lblArch"],["nIter","lblIter"],["nPop","lblPop"],["seed","lblSeed"]].forEach(([inp,lbl]) => {
+  $(inp).addEventListener("input", () => { $(lbl).textContent = Number($(inp).value).toLocaleString(); });
+});
+
+$("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const status = $("status");
+  status.classList.remove("hidden");
+  status.textContent = "⏳ Generando audiencias y ejecutando la simulación…";
+  $("runBtn").disabled = true;
+  $("dashboard").innerHTML = "";
+
+  // setTimeout para que el navegador pinte el estado antes de bloquear con el cálculo.
+  setTimeout(() => {
+    try {
+      const archetypes = generateArchetypes(Number($("nArch").value));
+      const agg = aggregateArchetypes(archetypes);
+      const cfg = {
+        ...agg,
+        n_iterations: Number($("nIter").value),
+        population_size: Number($("nPop").value),
+        random_seed: Number($("seed").value),
+        noise_scale: 1.0,
+      };
+      const results = runSimulation(cfg);
+      const insights = buildInsights(results);
+      renderDashboard(results, archetypes, insights);
+      status.classList.add("hidden");
+    } catch (err) {
+      status.textContent = "⚠️ " + (err && err.message ? err.message : err);
+    } finally {
+      $("runBtn").disabled = false;
+    }
+  }, 30);
+});
+</script>
+</body>
+</html>

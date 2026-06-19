@@ -58,6 +58,8 @@ El **motor Monte Carlo** ejecuta miles de iteraciones; en cada una genera una po
 ├── .github/workflows/ci.yml   # CI: lint + tests + coverage
 ├── examples/
 │   └── payload_default.json   # Payload de ejemplo para POST /simulations
+├── web/
+│   └── index.html             # Demo autónoma (motor Monte Carlo 100% en el navegador)
 ├── notebooks/
 │   └── demo_monte_carlo.ipynb # Demo con gráficos
 ├── backend/                   # API FastAPI + motor Monte Carlo
@@ -74,6 +76,14 @@ El **motor Monte Carlo** ejecuta miles de iteraciones; en cada una genera una po
 │   └── Dockerfile
 └── frontend/                  # Dashboard Next.js + TypeScript
 ```
+
+---
+
+## ⚡ Demo sin instalar nada
+
+¿Solo quieres ver el modelo en acción? Abre [`web/index.html`](web/index.html) en tu
+navegador: ejecuta el motor Monte Carlo **100 % en local** (sin backend) y muestra
+aceptación, intención de compra, objeciones, características clave y arquetipos.
 
 ---
 
