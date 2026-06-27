@@ -74,6 +74,37 @@ export interface StatusResponse {
   error?: string | null;
 }
 
+// --- Módulo Audience Research (Jobs-to-be-Done) ---
+
+export interface AudienceSegment {
+  segment: string;
+  is_hypothesis: boolean;
+  trigger_situation: string;
+  trigger_event: string;
+  best_timing: string;
+  job_functional: string;
+  job_emotional: string;
+  job_social: string;
+  sales_questions: string;
+  support_frustrations: string;
+  social_listening: string;
+  main_pain: string;
+  main_desire: string;
+  evidence: string;
+}
+
+export interface AudienceResearchResponse {
+  summary: string;
+  segments: AudienceSegment[];
+  source: string;
+}
+
+export interface AudienceResearchInput {
+  product: string;
+  audience_hint?: string;
+  insights_raw?: string;
+}
+
 export interface AnalyzeIdeaInput {
   idea: string;
   target_audience: string;

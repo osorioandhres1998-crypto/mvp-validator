@@ -2,6 +2,8 @@
 
 import type {
   AnalyzeIdeaInput,
+  AudienceResearchInput,
+  AudienceResearchResponse,
   SimulationResults,
   StatusResponse,
 } from "./types";
@@ -27,6 +29,17 @@ export async function analyzeIdea(
   input: AnalyzeIdeaInput
 ): Promise<{ simulation_id: string; status: string }> {
   const res = await fetch(`${API_URL}/ideas/analyze`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle(res);
+}
+
+export async function researchAudience(
+  input: AudienceResearchInput
+): Promise<AudienceResearchResponse> {
+  const res = await fetch(`${API_URL}/audience-research`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

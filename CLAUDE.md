@@ -85,6 +85,7 @@ Traduce idea → audiencia → insights. **Degradación elegante**: funciona sin
 | `client.py` | Wrapper del SDK `anthropic` + `extract_json()`. `is_available()` decide si hay clave y SDK. |
 | `profiles.py` | Interfaz `ProfileGenerator` (Protocol) con 2 implementaciones: `ClaudeProfileGenerator` (real) y `HeuristicProfileGenerator` (fallback offline determinista). `get_profile_generator()` elige según `ANTHROPIC_API_KEY`. |
 | `config_builder.py` | `build_simulation_plan()`: genera arquetipos y los **agrega** (media ponderada por `segment_share`) en una config para `run_simulation`. |
+| `audience_research.py` | **Módulo Audience Research (JTBD)**: `AudienceResearcher` (Protocol) + `ClaudeAudienceResearcher` + `HeuristicAudienceResearcher` + `get_audience_researcher()`. Modela la demanda (segmentos con jobs e insights). Mismo patrón de fallback. |
 
 **Regla de oro de la IA:** siempre debe existir un fallback heurístico. Tests y
 CI corren **sin** clave de API. El campo `audience_source` (`claude`/`heuristic`)
@@ -101,6 +102,7 @@ indica qué motor se usó.
 | `GET`  | `/simulations/{id}/status` | `queued`/`running`/`done`/`failed`. |
 | `GET`  | `/simulations/{id}/results` | Resultados agregados (+ `archetypes`, `insights`, `audience_source` si vino de `/ideas/analyze`). |
 | `GET`  | `/simulations/{id}/samples?limit&page` | Muestras crudas por iteración, paginadas. |
+| `POST` | `/audience-research` | **Módulo JTBD (síncrono)**: producto → segmentos de demanda (jobs e insights). |
 | `GET`  | `/health` | Estado del servicio. |
 
 ---
@@ -113,7 +115,9 @@ Al modificar el proyecto, respeta estos invariantes para no romper la lógica:
    Si cambias la fórmula (adopción, efecto precio como **coste neto**,
    objeciones, importancia de características, cálculo de IC), **replica el
    cambio en `web/index.html`** (función `runSimulation`) y, si aplica, en el
-   notebook. Son tres implementaciones del mismo modelo.
+   notebook. Son tres implementaciones del mismo modelo. **Ojo:** esto aplica
+   solo al motor Monte Carlo. Los módulos **LLM** (arquetipos, Audience Research)
+   dependen del backend y **no** se replican en la demo `web/` autónoma.
 
 2. **El contrato API ↔ frontend debe ir sincronizado.** Cambios en
    `app/models/schemas.py` o en la forma de `results` ⇒ actualizar

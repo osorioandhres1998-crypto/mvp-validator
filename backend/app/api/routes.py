@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.llm.audience_research import get_audience_researcher
 from app.llm.config_builder import build_simulation_plan
 from app.models.schemas import (
+    AudienceResearchRequest,
+    AudienceResearchResponse,
     CreateSimulationResponse,
     HealthResponse,
     IdeaAnalysisRequest,
@@ -65,6 +68,28 @@ def analyze_idea(request: IdeaAnalysisRequest) -> CreateSimulationResponse:
     }
     record = store.create(plan["config"], meta=meta)
     return CreateSimulationResponse(simulation_id=record.id, status=record.status)
+
+
+@router.post(
+    "/audience-research",
+    response_model=AudienceResearchResponse,
+    tags=["audience"],
+)
+def audience_research(request: AudienceResearchRequest) -> AudienceResearchResponse:
+    """Modela la demanda de un producto con Jobs-to-be-Done.
+
+    Devuelve segmentos de audiencia con su situación gatillo, jobs (funcional,
+    emocional, social) e insights accionables. Es **síncrono** (una llamada →
+    un JSON). Usa Claude si hay ``ANTHROPIC_API_KEY``; si no, la heurística
+    determinista. El campo ``source`` indica qué motor se usó.
+    """
+    researcher = get_audience_researcher()
+    result = researcher.research(
+        product=request.product,
+        audience_hint=request.audience_hint,
+        insights_raw=request.insights_raw,
+    )
+    return AudienceResearchResponse(**result)
 
 
 @router.get(

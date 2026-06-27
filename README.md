@@ -125,6 +125,7 @@ npm run dev                        # http://localhost:3000
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `POST` | `/ideas/analyze` | **Analiza una idea con IA**: genera arquetipos de audiencia y lanza la simulación. |
+| `POST` | `/audience-research` | **Audience Research (JTBD)**: modela la demanda en segmentos (síncrono). |
 | `POST` | `/simulations` | Encola una simulación con `config` manual. Devuelve `simulation_id`. |
 | `GET`  | `/simulations/{id}/status` | Estado: `queued` / `running` / `done` / `failed`. |
 | `GET`  | `/simulations/{id}/results` | Resultados agregados (incluye `archetypes` e `insights` si vino de `/ideas/analyze`). |
@@ -201,6 +202,26 @@ curl "http://localhost:8000/simulations/ab12.../samples?limit=100&page=1"
 | `random_seed` | int? | `42` | Semilla para reproducibilidad. |
 | `include_raw_samples` | bool | `true` | Devolver muestras crudas paginables. |
 | `n_jobs` | int? | `null` | Workers de paralelización (`-1` = todas las CPU; `null` = automático). |
+
+---
+
+## 🧭 Módulo Audience Research (Jobs-to-be-Done)
+
+Además del motor cuantitativo, el proyecto incluye un módulo **cualitativo** que
+modela la **demanda** con el framework Jobs-to-be-Done. Dado un producto (+ pista
+de audiencia e insights reales opcionales), devuelve segmentos con su situación
+gatillo, sus jobs (funcional/emocional/social) e insights accionables, para
+mostrarse como **tabla comparativa** en `/audience-research`.
+
+Como el resto de la IA, usa Claude si hay `ANTHROPIC_API_KEY` y, si no, una
+**heurística determinista** (campo `source`). Detalle completo en
+[`MODULE_AUDIENCE_RESEARCH.md`](MODULE_AUDIENCE_RESEARCH.md).
+
+```bash
+curl -X POST http://localhost:8000/audience-research \
+  -H "Content-Type: application/json" \
+  -d '{"product":"App de finanzas para freelancers","audience_hint":"Autónomos en LATAM"}'
+```
 
 ---
 

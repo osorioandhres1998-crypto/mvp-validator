@@ -257,6 +257,90 @@ code {
   border-radius: 5px;
 }
 
+/* --- Navbar --- */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(23, 26, 53, 0.6);
+  backdrop-filter: blur(6px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.navbar .brand {
+  font-weight: 700;
+  color: var(--text);
+}
+.nav-links {
+  display: flex;
+  gap: 0.5rem;
+}
+.nav-link {
+  text-decoration: none;
+  color: var(--muted);
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.nav-link:hover {
+  color: var(--text);
+  background: var(--bg-2);
+}
+.nav-link.active {
+  color: white;
+  background: var(--accent);
+}
+
+/* --- Tabla de audiencia --- */
+.table-panel {
+  padding: 0.6rem;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.audience-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 640px;
+  font-size: 0.82rem;
+}
+.audience-table th,
+.audience-table td {
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.4;
+}
+.audience-table thead th {
+  background: var(--bg-2);
+  color: var(--text);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+}
+.audience-table .row-head {
+  background: var(--bg-2);
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chip-hyp {
+  display: inline-block;
+  margin-left: 0.4rem;
+  background: var(--warn);
+  color: white;
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 @media (max-width: 720px) {
   .form-row,
   .grid-2 {

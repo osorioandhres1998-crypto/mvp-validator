@@ -134,3 +134,50 @@ class SamplesPage(BaseModel):
     total: int
     total_pages: int
     items: list[dict[str, Any]]
+
+
+# ---------------------------------------------------------------------------
+# Módulo Audience Research (Jobs-to-be-Done)
+# ---------------------------------------------------------------------------
+
+
+class AudienceResearchRequest(BaseModel):
+    """Petición para modelar la demanda de un producto con JTBD."""
+
+    product: str = Field(
+        ..., min_length=10, description="Producto o servicio que se vende."
+    )
+    audience_hint: str | None = Field(
+        None, description="Hipótesis opcional de a quién se dirige."
+    )
+    insights_raw: str | None = Field(
+        None,
+        description="Insights reales opcionales (ventas, soporte, redes) para anclar.",
+    )
+
+
+class AudienceSegment(BaseModel):
+    """Un segmento de audiencia con su situación gatillo, jobs e insights."""
+
+    segment: str
+    is_hypothesis: bool = True
+    trigger_situation: str = ""
+    trigger_event: str = ""
+    best_timing: str = ""
+    job_functional: str = ""
+    job_emotional: str = ""
+    job_social: str = ""
+    sales_questions: str = ""
+    support_frustrations: str = ""
+    social_listening: str = ""
+    main_pain: str = ""
+    main_desire: str = ""
+    evidence: str = "hipótesis"
+
+
+class AudienceResearchResponse(BaseModel):
+    """Resultado del módulo Audience Research."""
+
+    summary: str
+    segments: list[AudienceSegment]
+    source: str
