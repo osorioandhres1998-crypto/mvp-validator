@@ -15,5 +15,7 @@ COPY app ./app
 
 EXPOSE 8000
 
-# Arranque del servidor ASGI.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Arranque del servidor ASGI. Forma shell para expandir ${PORT}: en local (y en
+# docker-compose) PORT no está definido y se usa 8000; en hosts como Railway o
+# Render se respeta el puerto que inyecta la plataforma.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
